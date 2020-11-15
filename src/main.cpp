@@ -14,12 +14,36 @@ bool is_number(std::string x)
 
 void kmeans_clustering(std::vector<Point>* points, int epochs, int k)
 {
-	std::vector<Point> centroids;
-	srand(std::time(0));  // need to set the random seed
+	unsigned int n = points->size();
 
+	std::vector<Point> centroids;
+	srand(std::time(0)); 
 	for (int i = 0; i < k; i++) 
 	{
-    	centroids.push_back(points->at(rand() % 100));
+    	centroids.push_back(points->at(static_cast<unsigned int>(rand()) % n));
+	}
+
+	for (auto &c : centroids)
+	{
+		int cluster_id = (&c - &centroids[0]);
+
+		// std::cout << "Centroid: " << c << std::endl;
+		for (auto &p : (*points))
+		{
+			double d = c.distance(p);
+			// std::cout << p << ":" << d << std::endl;
+
+			if (d < p.get_minimal_distance())
+			{
+				p.set_minimal_distance(d);
+				p.set_cluster(cluster_id);
+			}
+		}
+	}
+
+	for (auto &p : (*points))
+	{
+		std::cout << p.get_minimal_distance() << std::endl;
 	}
 }
 
@@ -36,6 +60,8 @@ int main(int argc, char **argv)
 		std::cerr << "Third argument should be number\n";
 		return 1;
 	}
+
+	int number_of_clusters = std::atoi(argv[3]);
 
 	std::ifstream input(argv[1]);
 	if (!input.is_open())
@@ -74,7 +100,9 @@ int main(int argc, char **argv)
 		points.push_back(p);
 	}
 
-	std::cout << points[0].distance(points[1]) << std::endl;
+	kmeans_clustering(&points, 30, number_of_clusters);
+
+	// std::cout << points[0].distance(points[1]) << std::endl;
 
 
 	return 0;
