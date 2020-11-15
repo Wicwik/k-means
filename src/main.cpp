@@ -5,6 +5,8 @@
 #include <ctime>
 #include "point.h"
 
+const int EPOCHS = -1;
+
 bool is_number(std::string x)
 {
     std::regex e("^[0-9]+$");
@@ -12,20 +14,11 @@ bool is_number(std::string x)
     return std::regex_match (x,e); 
 }
 
-void kmeans_clustering(std::vector<Point>* points, int epochs, int k)
+bool kmeans_clustering(std::vector<Point>* points, std::vector<Point>* centroids, int k)
 {
-	unsigned int n = points->size();
-
-	std::vector<Point> centroids;
-	srand(std::time(0)); 
-	for (int i = 0; i < k; i++) 
+	for (auto &c : (*centroids))
 	{
-    	centroids.push_back(points->at(static_cast<unsigned int>(rand()) % n));
-	}
-
-	for (auto &c : centroids)
-	{
-		int cluster_id = (&c - &centroids[0]);
+		int cluster_id = (&c - &(*centroids)[0]);
 
 		// std::cout << "Centroid: " << c << std::endl;
 		for (auto &p : (*points))
@@ -41,10 +34,89 @@ void kmeans_clustering(std::vector<Point>* points, int epochs, int k)
 		}
 	}
 
+	std::vector<int> number_of_points;
+	std::vector<double> sum_x;
+	std::vector<double> sum_y;
+
+	for (int i = 0; i < k; i++)
+	{
+		number_of_points.push_back(0);
+		sum_x.push_back(0.0);
+		sum_y.push_back(0.0);
+	}
+
 	for (auto &p : (*points))
 	{
-		std::cout << p.get_minimal_distance() << std::endl;
+		if (p.get_cluster() == -1)
+		{
+			std::cerr << "error: Point without cluster.\n";
+			std::exit(1);
+		}
+
+		unsigned int cluster = static_cast<unsigned int>(p.get_cluster());
+		number_of_points[cluster]++;
+		sum_x[cluster] += p.get_x();
+		sum_y[cluster] += p.get_y();
+
+		p.set_minimal_distance(__DBL_MAX__);
 	}
+
+	std::vector<Point> old_centroids;
+	for (auto &c : (*centroids))
+	{
+		unsigned int cluster_id = (&c - &(*centroids)[0]);
+
+		old_centroids.push_back(c);
+		c.set_x(sum_x[cluster_id]/number_of_points[cluster_id]);
+		c.set_y(sum_y[cluster_id]/number_of_points[cluster_id]);
+	}
+
+	for (auto &c : (*centroids))
+	{
+		unsigned int cluster_id = (&c - &(*centroids)[0]);
+
+		std::cout << "old centroid: " << old_centroids[cluster_id] << std::endl;
+		std::cout << "new centroid: " << c << std::endl;
+		if (c != old_centroids[cluster_id])
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+std::vector<Point> do_kmeans(std::vector<Point>* points, int epochs, int k)
+{
+	unsigned int n = points->size();
+	std::vector<Point> centroids;
+	srand(std::time(0)); 
+	for (int i = 0; i < k; i++) 
+	{
+    	centroids.push_back(points->at(static_cast<unsigned int>(rand()) % n));
+	}
+
+	if (epochs == -1)
+	{
+		int e = 0;
+		while(kmeans_clustering(points, &centroids, k))
+		{
+			std::cout << "epoch: " << ++e << std::endl;
+		}
+	}
+	else
+	{
+		for (int i = 0; i < epochs; i++)
+		{
+			if(!kmeans_clustering(points, &centroids, k))
+			{
+				break;
+			}
+		}
+	}
+
+
+	return centroids;
 }
 
 int main(int argc, char **argv)
@@ -100,9 +172,28 @@ int main(int argc, char **argv)
 		points.push_back(p);
 	}
 
-	kmeans_clustering(&points, 30, number_of_clusters);
+	if (!input.eof()) //unexpected end of stream
+	{
+		std::cout << "Error in input stream\n";
+		return 1;
+	}
 
-	// std::cout << points[0].distance(points[1]) << std::endl;
+	std::vector<Point> centroids = do_kmeans(&points, EPOCHS, number_of_clusters);
+
+	if (!(output << "x,y,c" << std::endl))
+	{
+		std::cerr << "Error while writing to file.\n";			
+		return 1;
+	}
+
+	for (auto &p : points)
+	{
+		if (!(output << p.get_x() << "," << p.get_y() << "," << p.get_cluster() << std::endl))
+		{
+			std::cerr << "Error while writing to file.\n";
+			return 1;
+		}
+	}
 
 
 	return 0;
