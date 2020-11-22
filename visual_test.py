@@ -13,7 +13,7 @@ plt.figure()
 df = pd.read_csv('output')
 sns.scatterplot(x=df.x, y=df.y, 
                 hue=df.c, 
-                palette=sns.color_palette('hls', n_colors=3))
+                palette=sns.color_palette('hls', n_colors=10))
 plt.xlabel('X')
 plt.ylabel('Y')
 plt.title('Clustered')
