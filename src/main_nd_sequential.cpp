@@ -14,7 +14,7 @@ bool is_number(std::string x)
     return std::regex_match (x,e); 
 }
 
-bool kmeans_clustering(std::vector<Point>* points, std::vector<Point>* centroids, int k)
+bool kmeans_clustering(std::vector<Point>* points, std::vector<Point>* centroids, int k, unsigned int dims)
 {
 	for (auto &c : (*centroids))
 	{
@@ -35,14 +35,19 @@ bool kmeans_clustering(std::vector<Point>* points, std::vector<Point>* centroids
 	}
 
 	std::vector<int> number_of_points;
-	std::vector<double> sum_x;
-	std::vector<double> sum_y;
+	std::vector<std::vector<double>> sum_cordinates;
 
 	for (int i = 0; i < k; i++)
 	{
 		number_of_points.push_back(0);
-		sum_x.push_back(0.0);
-		sum_y.push_back(0.0);
+
+		std::vector<double> sum;
+		for (unsigned int j = 0; j < dims; j++)
+		{
+			sum.push_back(0.0);
+		}
+
+		sum_cordinates.push_back(sum);
 	}
 
 	for (auto &p : (*points))
@@ -55,8 +60,13 @@ bool kmeans_clustering(std::vector<Point>* points, std::vector<Point>* centroids
 
 		unsigned int cluster = static_cast<unsigned int>(p.get_cluster());
 		number_of_points[cluster]++;
-		sum_x[cluster] += p.get_x();
-		sum_y[cluster] += p.get_y();
+
+		for (auto &sum : sum_cordinates[cluster])
+		{
+			unsigned int cord = (&sum - &sum_cordinates[cluster][0]);
+
+			sum += p.get_coordinates()[cord];
+		}
 
 		p.set_minimal_distance(__DBL_MAX__);
 	}
@@ -65,10 +75,13 @@ bool kmeans_clustering(std::vector<Point>* points, std::vector<Point>* centroids
 	for (auto &c : (*centroids))
 	{
 		unsigned int cluster_id = (&c - &(*centroids)[0]);
+		std::vector<double> new_coordinates;
 
 		old_centroids.push_back(c);
-		c.set_x(sum_x[cluster_id]/number_of_points[cluster_id]);
-		c.set_y(sum_y[cluster_id]/number_of_points[cluster_id]);
+		for (unsigned int i = 0; i < dims; i++)
+		{
+			new_coordinates.push_back(sum_cordinates[cluster_id][i]/number_of_points[cluster_id]);
+		}
 	}
 
 	for (auto &c : (*centroids))
@@ -86,7 +99,7 @@ bool kmeans_clustering(std::vector<Point>* points, std::vector<Point>* centroids
 	return false;
 }
 
-std::vector<Point> do_kmeans(std::vector<Point>* points, int epochs, int k)
+std::vector<Point> do_kmeans(std::vector<Point>* points, int epochs, int k, unsigned int dims)
 {
 	unsigned int n = points->size();
 	std::vector<Point> centroids;
@@ -99,7 +112,7 @@ std::vector<Point> do_kmeans(std::vector<Point>* points, int epochs, int k)
 	if (epochs == -1)
 	{
 		int e = 0;
-		while(kmeans_clustering(points, &centroids, k))
+		while(kmeans_clustering(points, &centroids, k, dims))
 		{
 			std::cout << "epoch: " << ++e << std::endl;
 		}
@@ -108,7 +121,7 @@ std::vector<Point> do_kmeans(std::vector<Point>* points, int epochs, int k)
 	{
 		for (int i = 0; i < epochs; i++)
 		{
-			if(!kmeans_clustering(points, &centroids, k))
+			if(!kmeans_clustering(points, &centroids, k, dims))
 			{
 				break;
 			}
@@ -152,6 +165,7 @@ int main(int argc, char **argv)
 
 	std::vector<Point> points;
 	std::string str_point;
+	unsigned int dims = 0;
 	while(std::getline(input, str_point))
 	{
 		std::vector<std::string> parsed;
@@ -165,10 +179,25 @@ int main(int argc, char **argv)
 			parsed.push_back(substr);
 		}
 
-		double x = std::stod(parsed[0]);
-		double y = std::stod(parsed[1]);
+		std::vector<double> coordinates;
 
-		Point p{x, y};
+		for (auto &i : parsed)
+		{
+			coordinates.push_back(std::stod(i));
+		}
+
+		if (!dims)
+		{
+			dims = coordinates.size();
+		}
+
+		if (dims != coordinates.size())
+		{
+			std::cerr << "Dimensions differ from previous coordinates.\n";
+			exit(0);
+		}
+
+		Point p{coordinates};
 		points.push_back(p);
 	}
 
@@ -178,20 +207,57 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	std::vector<Point> centroids = do_kmeans(&points, EPOCHS, number_of_clusters);
+	std::vector<Point> centroids = do_kmeans(&points, EPOCHS, number_of_clusters, dims);
 
-	if (!(output << "x,y,c" << std::endl))
+	for (unsigned int i = 0; i < dims; i++)
 	{
-		std::cerr << "Error while writing to file.\n";			
-		return 1;
+		if (!(output << static_cast<unsigned char>(('a' + i)) ))
+		{
+			std::cerr << "Error while writing to file.\n";			
+			return 1;
+		}
+
+		if (i != (dims-1))
+		{
+			if (!(output << ","))
+			{
+				std::cerr << "Error while writing to file.\n";			
+				return 1;
+			}
+		}
+		else if (!(output << ",z" << std::endl))
+		{	
+			std::cerr << "Error while writing to file.\n";			
+			return 1;
+		}
 	}
+
+	std::cout << points[0].get_cluster() << std::endl;
 
 	for (auto &p : points)
 	{
-		if (!(output << p.get_x() << "," << p.get_y() << "," << p.get_cluster() << std::endl))
+		std::vector<double> cords = p.get_coordinates();
+		for (unsigned int i = 0; i < dims; i++)
 		{
-			std::cerr << "Error while writing to file.\n";
-			return 1;
+			if (!(output << cords[i]))
+			{
+				std::cerr << "Error while writing to file.\n";			
+				return 1;
+			}
+
+			if (i != (dims-1))
+			{
+				if (!(output << ","))
+				{
+					std::cerr << "Error while writing to file.\n";			
+					return 1;
+				}
+			}
+			else if (!(output << ',' << p.get_cluster() << std::endl))
+			{	
+				std::cerr << "Error while writing to file.\n";			
+				return 1;
+			}
 		}
 	}
 

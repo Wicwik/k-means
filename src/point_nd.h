@@ -12,7 +12,7 @@ public:
 	}
 
 	Point(std::vector<double> coordinates)
-		: m_coordinates = {coordinates}
+		: m_coordinates{coordinates}
 		, m_cluster{-1}
 		, m_minimal_distance{__DBL_MAX__}
 	{
@@ -40,7 +40,8 @@ public:
 		{
 			for (const auto &c : other.m_coordinates)
 			{
-				dist += ((c - m_coordinates[(&c - &other.m_coordinates[0])]) * (c - m_coordinates[(&c - &other.m_coordinates[0])]))
+				unsigned int i = (&c - &other.m_coordinates[0]);
+				dist += ((c - m_coordinates[i]) * (c - m_coordinates[i]));
 			}
 		}
 		else
@@ -71,7 +72,7 @@ public:
     	m_cluster = cluster;
     }
 
-    double get_cordinates()
+    std::vector<double> get_coordinates()
     {
     	return m_coordinates;
     }
@@ -109,7 +110,7 @@ std::ostream& operator<<(std::ostream& lhs, const Point& rhs)
 	lhs << "[";
 	for (const auto &c : rhs.m_coordinates)
 	{
-		if (c == rhs.m_coordinates.back())
+		if (&c == &rhs.m_coordinates.back())
 		{
 			lhs << c << "]";
 		}
@@ -126,11 +127,12 @@ Point operator+(Point lhs, const Point& rhs)
 {
 	std::vector<double> sum;
 
-	if (lhs.m_coordinates.size() == rsh.m_coordinates.size())
+	if (lhs.m_coordinates.size() == rhs.m_coordinates.size())
 	{
 		for (const auto &c : lhs.m_coordinates)
 		{
-			sum.push_back(c + rsh.m_coordinates[(&c - &lhs.m_coordinates[0])]);
+			unsigned int i = (&c - &lhs.m_coordinates[0]);
+			sum.push_back(c + rhs.m_coordinates[i]);
 		}
 	}
 	else
@@ -147,7 +149,7 @@ Point operator+(Point lhs, const double& rhs)
 
 	for (const auto &c : lhs.m_coordinates)
 		{
-			sum.push_back(c + rsh);
+			sum.push_back(c + rhs);
 		}
 
 	return Point{sum};
@@ -157,11 +159,12 @@ Point operator-(Point lhs, const Point& rhs)
 {
 	std::vector<double> diff;
 
-	if (lhs.m_coordinates.size() == rsh.m_coordinates.size())
+	if (lhs.m_coordinates.size() == rhs.m_coordinates.size())
 	{
 		for (const auto &c : lhs.m_coordinates)
 		{
-			diff.push_back(c - rsh.m_coordinates[(&c - &lhs.m_coordinates[0])]);
+			unsigned int i = (&c - &lhs.m_coordinates[0]);
+			diff.push_back(c - rhs.m_coordinates[i]);
 		}
 	}
 	else
@@ -178,7 +181,7 @@ Point operator-(Point lhs, const double& rhs)
 
 	for (const auto &c : lhs.m_coordinates)
 	{
-		diff.push_back(c - rsh);
+		diff.push_back(c - rhs);
 	}
 
 	return Point{diff};
@@ -188,11 +191,12 @@ Point operator*(Point lhs, const Point& rhs)
 {
 	std::vector<double> mult;
 
-	if (lhs.m_coordinates.size() == rsh.m_coordinates.size())
+	if (lhs.m_coordinates.size() == rhs.m_coordinates.size())
 	{
 		for (const auto &c : lhs.m_coordinates)
 		{
-			mult.push_back(c * rsh.m_coordinates[(&c - &lhs.m_coordinates[0])]);
+			unsigned int i = (&c - &lhs.m_coordinates[0]);
+			mult.push_back(c * rhs.m_coordinates[i]);
 		}
 	}
 	else
@@ -200,7 +204,7 @@ Point operator*(Point lhs, const Point& rhs)
 		throw "Uneven number of dimensions\n";
 	}
 
-	return Point{mult}
+	return Point{mult};
 }
 
 Point operator*(Point lhs, const double& rhs)
@@ -209,7 +213,7 @@ Point operator*(Point lhs, const double& rhs)
 
 	for (const auto &c : lhs.m_coordinates)
 	{
-		mult.push_back(c * rsh);
+		mult.push_back(c * rhs);
 	}
 
 	return Point{mult};
@@ -217,11 +221,12 @@ Point operator*(Point lhs, const double& rhs)
 
 bool operator==(const Point& lhs, const Point& rhs)
 {
-	if (lhs.m_coordinates.size() == rsh.m_coordinates.size())
+	if (lhs.m_coordinates.size() == rhs.m_coordinates.size())
 	{
 		for (const auto &c : lhs.m_coordinates)
 		{
-			if (c  != rsh.m_coordinates[(&c - &lhs.m_coordinates[0])])
+			unsigned int i = (&c - &lhs.m_coordinates[0]);
+			if (c  != rhs.m_coordinates[i])
 			{
 				return false;
 			}
