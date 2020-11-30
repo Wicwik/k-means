@@ -82,6 +82,8 @@ bool kmeans_clustering(std::vector<Point>* points, std::vector<Point>* centroids
 		{
 			new_coordinates.push_back(sum_cordinates[cluster_id][i]/number_of_points[cluster_id]);
 		}
+
+		c.set_coordinates(new_coordinates);
 	}
 
 	for (auto &c : (*centroids))
